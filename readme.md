@@ -23,6 +23,7 @@ Entrar a el codigo yml del documento y pegar el codigo del servicio que quieras 
 
 Despues tienes que abrir la terminal en el ap
 artado "View": 
+
 ![alt text](image-1.png)
 
 Dentro de la terminal al escribir docker compose up -d:
