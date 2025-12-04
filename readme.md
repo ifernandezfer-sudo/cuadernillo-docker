@@ -15,6 +15,9 @@
     - [Obsidian:](#obsidian)
     - [Libreoffice:](#libreoffice)
     - [Jelllyfin:](#jelllyfin)
+    - [Pihole:](#pihole)
+
+
 
 ## Como levantar un servicio:
 Entrar a el codigo yml del documento y pegar el codigo del servicio que quieras levantar como se ve en esta foto:
@@ -33,87 +36,81 @@ Dentro de la terminal al escribir docker compose up -d:
 
 Si tienes algun problema recuerda tener la aplicacion de Docker abierta o mirar si hay algo mal escrito en el codigo.
 
+
+
 ## Servicios levantados hasta ahora:
 Si quieres levantar cualquiera de estos servicios solamente copia tu codigo en tu documento yml.
 
 ### Portaner:
 ```yml
-portainer:
+  portainer:
     image: portainer/portainer-ce:latest
-    restart: always
+    container_name: portainer
     ports:
-      - "9443:9443"
+      - "9000:9000"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - portainer_data:/data
+      - portainer_data:/data 
+      - /var/run/docker.sock:/var/run/docker.sock 
+    restart: unless-stopped
 ```
 
 ### Excalidraw:
 ```yml
-excalidraw:
-    container_name: excalidraw
+  excalidraw:
     image: excalidraw/excalidraw:latest
+    container_name: excalidraw_whiteboard
     ports:
       - "3030:80"
-    restart: on-failure
+    restart: unless-stopped
+
 ```
 
 ### Apache:
 ```yml
-  apache:
-    image: httpd:2.4-alpine
-    container_name: apache
+  apache_web:
+    image: httpd:latest
+    container_name: apache_server
     ports:
-      - 8081:80
+      - "8081:80" 
     volumes:
-      - ./public:/usr/local/apache2/htdocs:ro
+      - ./data/apache_html:/usr/local/apache2/htdocs/ 
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/ || exit 1"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
+
 ```
 
 ### VSCode:
 ```yml
-  code:
-    image: lscr.io/linuxserver/code-server:latest
-    restart: always
+  vscode_server:
+    image: lscr.io/linuxserver/codeserver:latest
+    container_name: vscode_server
     environment:
       PUID: 1000
       PGID: 1000
       TZ: Europe/Madrid
-      PASSWORD: examplepass
     volumes:
-      - ./:/config/workspace
-      - code_config:/config
+      - ./config/vscode:/config
+      - ./data/vscode_projects:/config/workspace 
     ports:
       - "8443:8443"
+    restart: unless-stopped
 
-
-volumes:
-  code_config:
 ```
 
 ### Duplicati:
 ```yml
-duplicati:
+  duplicati:
     image: lscr.io/linuxserver/duplicati:latest
     container_name: duplicati
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Madrid
-      - SETTINGS_ENCRYPTION_KEY=pon_algo_aquí
-      - CLI_ARGS= #optional
-      - DUPLICATI__WEBSERVICE_PASSWORD=micontraseña
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Madrid
     volumes:
-      - ./duplicati:/config
-      - ./micarpetasegura:/soruce/micarpetasegura
-
+      - ./config/duplicati:/config
+      - ./data/source_backups:/source 
+      - ./data/dest_backups:/backups 
     ports:
-      - 8200:8200
+      - "8200:8200"
     restart: unless-stopped
 
 ```
@@ -121,177 +118,115 @@ duplicati:
 ### Snapdrop:
 ```yml
   snapdrop:
-    image: linuxserver/snapdrop:version-b8b78cc2
+    image: lscr.io/linuxserver/snapdrop:latest
     container_name: snapdrop
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Etc/UTC
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Madrid
     volumes:
-      - ./config:/config
+      - ./config/snapdrop:/config
     ports:
-      - 8081:80
-      - 443:443
+      - "80:80"
     restart: unless-stopped
 ```
 
 ### Kali linux:
 ```yml
-  alpine-bash:
-    image: mikeldalmauc/alpine-bash:v1.0
-    container_name: alpine-bash
-    restart: unless-stopped
-    tty: true
-    stdin_open: true
-
-  kali:
-    image: ibonfernandez/kali-nmap-ip
-    container_name: kali
-    restart: unless-stopped
-    tty: true
-    stdin_open: true
-    cap_add:
-    - NET_ADMIN
-    - NET_RAW
-    # Puedes montar herramientas o scripts locales:
-    # volumes:
-    #   - ./tools:/root/tools
-
-  ftp:
-    image: fauria/vsftpd
-    container_name: ftp
-    restart: unless-stopped
+  kali-linux:
+    image: lscr.io/linuxserver/kali-linux:latest
+    container_name: kali_linux
     environment:
-      - FTP_USER=test
-      - FTP_PASS=test123
-      - PASV_ADDRESS=127.0.0.1
-    ports:
-      - "21:21"
-      - "21000-21010:21000-21010"
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Madrid
     volumes:
-      - ./ftpdata:/home/vsftpd
-    tty: true
-
-  ssh:
-    image: linuxserver/openssh-server
-    container_name: ssh
-    restart: unless-stopped
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Madrid
-      - PASSWORD_ACCESS=true
-      - USER_NAME=labuser
-      - USER_PASSWORD=lab1234
+      - ./config/kali:/config
     ports:
-      - "2222:2222"
-    tty: true
-
-  dvwa:
-    image: vulnerables/web-dvwa
-    container_name: dvwa
+      - "3002:3000"
+    shm_size: "1gb"
     restart: unless-stopped
-    ports:
-      - "8080:80"
-    environment:
-      - MYSQL_PASS=p@ssw0rd
-    tty: true
-
-
-  # OPCIONAL: Metasploitable 2 (vulnerable system completo)
-  # metasploitable:
-  #   image: tleemcjr/metasploitable2
-  #   container_name: metasploitable
-  #   restart: unless-stopped
-  #   tty: true
-
-networks:
-  default:
-    name: lab-net
 ```
 
 ### Wordpress y db:
 ```yml
   wordpress:
-    image: wordpress
-    restart: always
-    
+    image: wordpress:latest
+    container_name: wordpress_site
     ports:
-      - 8080:80
+      - "8000:80"
     environment:
-      WORDPRESS_DB_HOST: db
-      WORDPRESS_DB_USER: exampleuser
-      WORDPRESS_DB_PASSWORD: examplepass
-      WORDPRESS_DB_NAME: exampledb
+      WORDPRESS_DB_HOST: db_wordpress
+      WORDPRESS_DB_NAME: wordpress_db
+      WORDPRESS_DB_USER: wordpress_user
+      WORDPRESS_DB_PASSWORD: supersecretpassword
     volumes:
-      - wordpress:/var/www/html
+      - ./data/wordpress/html:/var/www/html
+    restart: unless-stopped
 
-  db:
+  db_wordpress:
     image: mysql:8.0
-    restart: always
+    container_name: wordpress_db_container
     environment:
-      MYSQL_DATABASE: exampledb
-      MYSQL_USER: exampleuser
-      MYSQL_PASSWORD: examplepass
-      MYSQL_RANDOM_ROOT_PASSWORD: '1'
+      MYSQL_ROOT_PASSWORD: root_supersecretpassword
+      MYSQL_DATABASE: wordpress_db
+      MYSQL_USER: wordpress_user
+      MYSQL_PASSWORD: supersecretpassword
     volumes:
-      - db:/var/lib/mysql
-
-volumes:
-  wordpress:
-  db:
+      - ./data/wordpress/db_data:/var/lib/mysql
+    restart: unless-stopped
 ```
 
 ### File-browser:
 ```yml
-  uploader:
-    image: filebrowser/filebrowser:v2.23.0
-    container_name: uploader
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: filebrowser
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Madrid
     volumes:
-      - ${RUTA_BASE}:/srv
-      - filebrowser_db:/database
+      - ./config/filebrowser:/database.db
+      - ./data/shared_files:/srv 
     ports:
-      - "60:80"   # ERROR DE SEGURIDAD: Puerto 80 reservado por sistema, cambialo a variable
+      - "8080:80"
     restart: unless-stopped
-volumes:
-  filebrowser_db:
+
 
 ```
 
 ### Firefox:
 ```yml
   firefox:
-    image: jlesage/firefox  # OJO: ¿Esta imagen existe así tal cual? Verificad en Docker Hub.
+    image: jlesage/firefox:latest
+    container_name: firefox_browser
     ports:
-      - "${PORT_FIREFOX}:5800"
+      - "5800:5800" 
     volumes:
-      - firefox_config:/config:rw
-      -  ${RUTA_BASE}:/config/downloads
-volumes:
-  firefox_config:
+      - ./config/firefox:/config:rw
+    restart: unless-stopped
 
 ```
 
 
 ### Obsidian:
 ```yml
-  obsidian:
-    image: lscr.io/linuxserver/obsidian:latest
-    container_name: obsidian  
+  syncthing_obsidian:
+    image: lscr.io/linuxserver/syncthing:latest
+    container_name: syncthing_obsidian
     environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=Etc/UTC
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Madrid
     volumes:
-      - obsidian_config:/config
-      -  ${RUTA_BASE}:/data
+      - ./config/syncthing:/config
+      - ./data/obsidian_notes:/notes 
     ports:
-      - "3000:3000" # ERROR: Conflictos de puerto si no se parametrizan. Usad variables.
-      - "3001:3001" 
-    shm_size: "1gb"
+      - "8384:8384" 
+      - "22000:22000/tcp"
+      - "21027:21027/udp"
     restart: unless-stopped
-volumes:
-  obsidian_config:
 
 ```
 
@@ -300,20 +235,18 @@ volumes:
   libreoffice:
     image: lscr.io/linuxserver/libreoffice:latest
     container_name: libreoffice
+    security_opt:
+      - seccomp=unconfined 
     environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=Etc/UTC
-    volumes:
-      - libreoffice_config:/config
-      - ${RUTA_BASE}:/data
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Madrid
     ports:
-      - "23:3000" # ERROR LÓGICO: ¡Este puerto ya lo usa Obsidian!
-      - "43:3001" 
-    shm_size: "1gb"
+      - "3000:3000" 
+      - "3001:3001" 
+    volumes:
+      - ./config/libreoffice:/config
     restart: unless-stopped
-volumes:
-  libreoffice_config:
 
 ```
 
@@ -334,3 +267,24 @@ volumes:
   jellyfin_config:
 ```
 
+### Pihole:
+```yml
+  pihole:
+    image: pihole/pihole:latest
+    container_name: pihole
+    ports:
+      - "53:53/tcp" 
+      - "53:53/udp" 
+      - "8082:80"
+      - "67:67/udp" 
+    environment:
+      TZ: Europe/Madrid
+      WEBPASSWORD: "PonUnaContrasenaSeguraParaPiHole"
+    volumes:
+      - './config/pihole/etc-pihole:/etc/pihole'
+      - './config/pihole/etc-dnsmasq.d:/etc/dnsmasq.d'
+    restart: unless-stopped
+
+volumes:
+  portainer_data:
+```
